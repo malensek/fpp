@@ -12,7 +12,7 @@ logOutput
 # Clear any restart flag
 sed -i -e "s/^restartFlag .*/restartFlag = 0/" ${FPPHOME}/media/settings
 
-if [ -f "/.dockerenv" ]
+if [ -f "/.dockerenv" ] || [ -f "/run/.containerenv" ]
 then
     echo "Setup channel outputs"
     setupChannelOutputs
