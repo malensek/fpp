@@ -127,6 +127,7 @@ void Scheduler::CheckIfShouldBePlayingNow(int ignoreRepeat, int forceStopped) {
     LogDebug(VB_SCHEDULE, "CheckIfShouldBePlayingNow(%d, %d)\n", ignoreRepeat, forceStopped);
 
     std::time_t now = time(nullptr);
+    std::unique_lock<std::recursive_mutex> lock(m_scheduleLock);
 
     for (auto& itemTime : m_scheduledItems) {
         if (itemTime.first > now) {
@@ -169,6 +170,7 @@ std::string Scheduler::GetPlaylistThatShouldBePlaying(int& repeat) {
         return "";
 
     std::time_t now = time(nullptr);
+    std::unique_lock<std::recursive_mutex> lock(m_scheduleLock);
 
     for (auto& itemTime : m_scheduledItems) {
         if (itemTime.first > now) {
@@ -510,7 +512,8 @@ void Scheduler::CheckScheduledItems(bool restarted) {
                     if ((Player::INSTANCE.GetPlaylistName() == item->entry->playlist) &&
                         (Player::INSTANCE.WasScheduled()) &&
                         (Player::INSTANCE.GetRepeat() == item->entry->repeat) &&
-                        (Player::INSTANCE.GetStopTime() == item->endTime) &&
+                        ((Player::INSTANCE.GetOrigStopTime() == item->endTime) ||
+                         (Player::INSTANCE.GetStopTime() == item->endTime)) &&
                         (Player::INSTANCE.GetStopMethod() == item->entry->stopType)) {
                         SetItemRan(item, true);
                         continue;
@@ -649,7 +652,7 @@ void Scheduler::LoadScheduleFromFile(void) {
     m_loadSchedule = false;
     m_lastLoadDate = GetCurrentDateInt();
 
-    std::unique_lock<std::mutex> lock(m_scheduleLock);
+    std::unique_lock<std::recursive_mutex> lock(m_scheduleLock);
     m_Schedule.clear();
     ClearScheduledItems();
 
@@ -745,6 +748,7 @@ void Scheduler::SchedulePrint(void) {
 
 ScheduledItem* Scheduler::GetNextScheduledPlaylist() {
     std::time_t now = time(nullptr);
+    std::unique_lock<std::recursive_mutex> lock(m_scheduleLock);
 
     for (auto& itemTime : m_scheduledItems) {
         for (auto& item : *itemTime.second) {
@@ -763,6 +767,7 @@ std::string Scheduler::GetNextPlaylistName() {
     if (m_schedulerDisabled)
         return "Scheduler is disabled.";
 
+    std::unique_lock<std::recursive_mutex> lock(m_scheduleLock);
     ScheduledItem* item = GetNextScheduledPlaylist();
 
     if (!item)
@@ -777,6 +782,7 @@ std::string Scheduler::GetNextPlaylistStartStr() {
 
     std::string timeFmt = getSetting("DateFormat") + " @ " + getSetting("TimeFormat");
     std::string result;
+    std::unique_lock<std::recursive_mutex> lock(m_scheduleLock);
     ScheduledItem* item = GetNextScheduledPlaylist();
 
     if (!item)
@@ -855,6 +861,7 @@ Json::Value Scheduler::GetInfo(void) {
     Json::Value result;
 
     std::string timeFmt = getSetting("DateFormat") + " @ " + getSetting("TimeFormat");
+    std::unique_lock<std::recursive_mutex> lock(m_scheduleLock);
     Json::Value np;
     np["playlistName"] = GetNextPlaylistName();
     np["scheduledStartTime"] = 0;
@@ -931,7 +938,7 @@ Json::Value Scheduler::GetSchedule() {
     Json::Value items(Json::arrayValue);
     Json::Value scheduledItem;
     std::time_t now = time(nullptr);
-    std::unique_lock<std::mutex> lock(m_scheduleLock);
+    std::unique_lock<std::recursive_mutex> lock(m_scheduleLock);
 
     result["enabled"] = m_schedulerDisabled ? 0 : 1;
 

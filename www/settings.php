@@ -36,7 +36,7 @@ function handleSettingsVisibilityChange() {
 }
 
 function reloadSettingsPage() {
-    location.href = 'settings.php?tab=' + $('#settingsManagerTabs .nav-link.active').data('option');
+    location.href = 'settings.php' + $('#settingsManagerTabs .nav-link.active').attr('href');
 }
 
 var hiddenChildren = {};
@@ -54,6 +54,11 @@ function UpdateChildSettingsVisibility() {
 
 var statusTimeout = null;
 function UpdateCurrentTime(once = false) {
+    if (statusTimeout != null) {
+        clearTimeout(statusTimeout);
+        statusTimeout = null;
+    }
+
     $.get('api/time', function(data) {
         $('#currentTime').html(data.time);
         if (!once)
@@ -208,6 +213,21 @@ var activeTabNumber =
     }
 ?>;
 
+var tabIDs = <?php echo json_encode($tabIDs); ?>;
+if(location.hash){
+    if( location.hash == '#settings-system'){ activeTabNumber = tabIDs["System"]}
+    if( location.hash == '#settings-av'){ activeTabNumber = tabIDs["AV"]}
+    if( location.hash == '#settings-time'){ activeTabNumber = tabIDs["Time"] }
+    if( location.hash == '#settings-ui'){ activeTabNumber = tabIDs["UI"] }
+    if( location.hash == '#settings-email'){ activeTabNumber = tabIDs["Email"] }
+    if( location.hash == '#settings-mqtt'){ activeTabNumber = tabIDs["MQTT"] }
+    if( location.hash == '#settings-privacy'){ activeTabNumber = tabIDs["Privacy"] }
+    if( location.hash == '#settings-output'){ activeTabNumber = tabIDs["Output"] }
+    if( location.hash == '#settings-logs'){ activeTabNumber = tabIDs["Logging"] }
+    if( location.hash == '#settings-storage'){ activeTabNumber = tabIDs["Storage"]}
+    if( location.hash == '#settings-system'){ activeTabNumber = tabIDs["System"] }
+    if( location.hash == '#settings-developer'){ activeTabNumber = tabIDs["Developer"] }
+}
 var tabs={}
 $('#settingsManagerTabs .nav-link').each(function(i){
     var tabName = $(this).attr('href').slice(1);
@@ -242,7 +262,8 @@ $('#settingsManagerTabs .nav-link').each(function(i){
         };
     }
     $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-        if ($(this).attr("href") == '#settings-time') {
+        if (($(this).attr("href") == '#settings-time') &&
+            ($(this).parent().hasClass('active'))) {
             UpdateCurrentTime();
         } else if (statusTimeout != null) {
             clearTimeout(statusTimeout);
